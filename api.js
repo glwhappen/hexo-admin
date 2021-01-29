@@ -205,8 +205,7 @@ module.exports = function (app, hexo) {
     if (!req.body.title) {
       return res.send(400, 'No title given');
     }
-
-    hexo.post.create({title: req.body.title, layout: 'page', date: new Date()})
+    hexo.post.create({title: req.body.title, layout: 'page', date: new Date(), author: hexo.config.author})
     .error(function(err) {
       console.error(err, err.stack)
       return res.send(500, 'Failed to create page')
@@ -215,7 +214,7 @@ module.exports = function (app, hexo) {
       var source = file.path.slice(hexo.source_dir.length)
 
       hexo.source.process([source]).then(function () {
-        var page = hexo.model('Page').findOne({source: source})
+        var page = hexo.model('Page').findOne({source: source.replace(/\\/g, '\/')});
         res.done(addIsDraft(page));
       });
     });
@@ -345,7 +344,7 @@ module.exports = function (app, hexo) {
     }
     var settings = getSettings()
 
-    var imagePath = '/images'
+    var imagePath = req.body.filePath;
     var imagePrefix = 'pasted-'
     var askImageFilename = false
     var overwriteImages = false
@@ -353,16 +352,16 @@ module.exports = function (app, hexo) {
     if (settings.options) {
       askImageFilename = !!settings.options.askImageFilename
       overwriteImages = !!settings.options.overwriteImages
-      imagePath = settings.options.imagePath ? settings.options.imagePath : imagePath
+      //imagePath = settings.options.imagePath ? settings.options.imagePath : imagePath
       imagePrefix = settings.options.imagePrefix ? settings.options.imagePrefix : imagePrefix
     }
 
-    var msg = 'upload successful'
-    var filename = imagePrefix + i +'.png'
+    var msg = '玖涯博客'
     var i = 0
-    while (fs.existsSync(path.join(hexo.source_dir, imagePath, filename))) {
-      i += 1
+    while (fs.existsSync(path.join(hexo.source_dir, imagePath, imagePrefix + i +'.png'))) {
+      i +=1
     }
+    var filename = path.join(imagePrefix + i +'.png')
     if (req.body.filename) {
       var givenFilename = req.body.filename
       // check for png ending, add it if not there
@@ -385,7 +384,7 @@ module.exports = function (app, hexo) {
       }
     }
 
-    filename = path.join(imagePath, filename)
+    filename = imagePath+"/"+ filename
     var outpath = path.join(hexo.source_dir, filename)
 
     var dataURI = req.body.data.slice('data:image/png;base64,'.length)
@@ -395,10 +394,9 @@ module.exports = function (app, hexo) {
       if (err) {
         console.log(err)
       }
-      var imageSrc = path.join(hexo.config.root + filename).replace(/\\/g, '/')
       hexo.source.process().then(function () {
         res.done({
-          src: imageSrc,
+          src: filename,
           msg: msg
         })
       });
