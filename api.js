@@ -8,6 +8,8 @@ var updateAny = require('./update')
   , update = updateAny.bind(null, 'Post')
   , deploy = require('./deploy')
 
+let currentPostId = ''
+
 module.exports = function (app, hexo) {
 
   function addIsDraft(post) {
@@ -311,6 +313,8 @@ module.exports = function (app, hexo) {
     }
 
     var id = last
+	currentPostId = id
+	// hexo.log.info('文章id:',id)
     if (id === 'posts' || !id) return next()
     if (req.method === 'GET') {
       var post = hexo.model('Post').get(id)
@@ -343,8 +347,14 @@ module.exports = function (app, hexo) {
       return res.send(400, 'No data given');
     }
     var settings = getSettings()
+	
+	var post = hexo.model('Post').get(currentPostId)
+	let fullPath = post.source
+	let pos = fullPath.lastIndexOf('.')
+	let filePath = fullPath.substr(0, pos)
 
-    var imagePath = req.body.filePath;
+    // var imagePath = req.body.filePath;
+	let imagePath = filePath
     var imagePrefix = 'pasted-'
     var askImageFilename = false
     var overwriteImages = false
@@ -383,8 +393,26 @@ module.exports = function (app, hexo) {
         filename = givenFilename
       }
     }
+	
+	// 拼接图片输出的地址
+	let myImagePath = post.slug
+	pos = myImagePath.lastIndexOf('/')
+	if(pos === -1) {
+		pos = 0
+	} else {
+		pos++
+	}
+	myImagePath = '/' + myImagePath.substr(pos) + '/' + filename
+	
 
     filename = imagePath+"/"+ filename
+	
+	
+	
+	
+	// var post = hexo.model('Post')
+	hexo.log.info('文件名:',post,post.slug, post.title, post.source, post.source_dir)
+	hexo.log.info('image:',imagePath)
     var outpath = path.join(hexo.source_dir, filename)
 
     var dataURI = req.body.data.slice('data:image/png;base64,'.length)
@@ -396,8 +424,8 @@ module.exports = function (app, hexo) {
       }
       hexo.source.process().then(function () {
         res.done({
-          src: filename,
-          msg: msg
+          src: myImagePath,
+          msg: ''
         })
       });
     })
